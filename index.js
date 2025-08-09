@@ -20,10 +20,9 @@ app.use(express.json());
 // --- MongoDB Connection ---
 // Connect to the MongoDB database using the URI from environment variables.
 // Using mongoose for object data modeling (ODM).
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+const MONGO_URI = process.env.MONGO_URI;
+
+mongoose.connect(MONGO_URI);
 
 const connection = mongoose.connection;
 connection.once('open', () => {
