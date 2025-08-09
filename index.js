@@ -10,10 +10,16 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
+const corsOptions = {
+  origin: 'https://lc-corporate-frontend.vercel.app/', // Replace with your Vercel URL
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type'],
+  credentials: true,
+};
 // --- Middleware ---
 // Enable Cross-Origin Resource Sharing to allow requests from the frontend
-app.use(cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 // Parse incoming JSON requests
 app.use(express.json());
 
