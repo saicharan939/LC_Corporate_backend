@@ -1,4 +1,4 @@
-// server.js
+// index.js
 // This file sets up the Node.js Express server, connects to MongoDB,
 // and defines the API routes for the URL shortener application.
 
@@ -10,33 +10,31 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// --- Middleware ---
+
+// This single CORS configuration is sufficient to handle all requests,
+// including the OPTIONS preflight requests sent by browsers.
 const corsOptions = {
-  origin: 'https://lc-corporate-frontend.vercel.app', // Replace with your Vercel URL
+  origin: 'https://lc-corporate-frontend.vercel.app', // Your Vercel URL
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type'],
   credentials: true,
 };
-// --- Middleware ---
-// Enable Cross-Origin Resource Sharing to allow requests from the frontend
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+
 // Parse incoming JSON requests
 app.use(express.json());
 
 // --- MongoDB Connection ---
-// Connect to the MongoDB database using the URI from environment variables.
-// Using mongoose for object data modeling (ODM).
 const MONGO_URI = process.env.MONGO_URI;
 
-mongoose.connect(MONGO_URI);
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('MongoDB database connection established successfully'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
-const connection = mongoose.connection;
-connection.once('open', () => {
-  console.log('MongoDB database connection established successfully');
-});
 
 // --- Mongoose Schema and Model ---
-// Defines the structure for the URL documents stored in MongoDB.
 const urlSchema = new mongoose.Schema({
   originalUrl: { type: String, required: true },
   shortCode: { type: String, required: true, default: shortid.generate },
@@ -48,34 +46,29 @@ const urlSchema = new mongoose.Schema({
 const Url = mongoose.model('Url', urlSchema);
 
 // --- API Routes ---
+// NOTE: Specific routes are defined BEFORE general/wildcard routes.
 
 /**
  * @route   POST /api/shorten
  * @desc    Create a short URL
- * @access  Public
  */
 app.post('/api/shorten', async (req, res) => {
   const { longUrl } = req.body;
   const baseUrl = process.env.BASE_URL || `http://localhost:${PORT}`;
 
-  // Basic validation for the long URL
   if (!longUrl) {
     return res.status(400).json('Invalid URL: Please provide a URL.');
   }
 
   try {
-    // Check if the URL has already been shortened
     let url = await Url.findOne({ originalUrl: longUrl });
 
     if (url) {
-      // If it exists, return the existing short URL
       res.json(url);
     } else {
-      // If it's a new URL, generate a new short code
       const shortCode = shortid.generate();
       const shortUrl = `${baseUrl}/${shortCode}`;
 
-      // Create a new URL document
       url = new Url({
         originalUrl: longUrl,
         shortCode,
@@ -83,7 +76,6 @@ app.post('/api/shorten', async (req, res) => {
         date: new Date(),
       });
 
-      // Save the new URL to the database
       await url.save();
       res.json(url);
     }
@@ -93,12 +85,9 @@ app.post('/api/shorten', async (req, res) => {
   }
 });
 
-
-
 /**
  * @route   GET /api/urls
  * @desc    Get all shortened URLs (for admin page)
- * @access  Public (in a real app, this should be protected)
  */
 app.get('/api/urls', async (req, res) => {
     try {
@@ -110,16 +99,13 @@ app.get('/api/urls', async (req, res) => {
     }
 });
 
-
 /**
  * @route   GET /:shortcode
- * @desc    Redirect to the original long URL
- * @access  Public
+ * @desc    Redirect to the original long URL (This is a general route and must be last)
  */
 app.get('/:shortcode', async (req, res) => {
   try {
-    const { shortcode } = req.params;
-    const url = await Url.findOne({ shortCode: shortcode });
+    const url = await Url.findOne({ shortCode: req.params.shortcode });
 
     if (url) {
       url.clicks++;
