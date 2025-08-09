@@ -93,31 +93,7 @@ app.post('/api/shorten', async (req, res) => {
   }
 });
 
-/**
- * @route   GET /:shortcode
- * @desc    Redirect to the original long URL
- * @access  Public
- */
-app.get('/:shortcode', async (req, res) => {
-  try {
-    // Find the URL by its short code in the database
-    const url = await Url.findOne({ shortCode: req.params.shortcode });
 
-    if (url) {
-      // If found, increment the click count
-      url.clicks++;
-      await url.save();
-      // Redirect the user to the original URL
-      return res.redirect(url.originalUrl);
-    } else {
-      // If not found, return a 404 error
-      return res.status(404).json('No URL found');
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json('Server error');
-  }
-});
 
 /**
  * @route   GET /api/urls
@@ -132,6 +108,30 @@ app.get('/api/urls', async (req, res) => {
         console.error(err);
         res.status(500).json('Server error');
     }
+});
+
+
+/**
+ * @route   GET /:shortcode
+ * @desc    Redirect to the original long URL
+ * @access  Public
+ */
+app.get('/:shortcode', async (req, res) => {
+  try {
+    const { shortcode } = req.params;
+    const url = await Url.findOne({ shortCode: shortcode });
+
+    if (url) {
+      url.clicks++;
+      await url.save();
+      return res.redirect(url.originalUrl);
+    } else {
+      return res.status(404).json('No URL found');
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json('Server error');
+  }
 });
 
 
